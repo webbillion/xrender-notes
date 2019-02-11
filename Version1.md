@@ -107,7 +107,7 @@ add an el
 ### XElement
 图形元素，一个抽象类，它应该帮继承它的类如`Circle`处理好样式之类的选项，`Circle`只需要绘制即可。显然它的构造函数应该接受一个选项作为参数，包括这些：
 ```typescript
-import { updateObjValue } from '../util'
+import { merge } from '../util'
 /**
  * 目前什么都没有
  */
@@ -161,10 +161,10 @@ class XElement {
     let opt = this.options
     if (opt.shape) {
       // 这个函数会覆盖第一个参数中原来的值
-      updateObjValue(this.shape, opt.shape)
+      merge(this.shape, opt.shape)
     }
     if (opt.style) {
-      updateObjValue(this.style, opt.style)
+      merge(this.style, opt.style)
     }
   }
 }
