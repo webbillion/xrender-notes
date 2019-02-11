@@ -166,11 +166,11 @@ class XElement {
   attrFunctions = {
     shape: (newShape: Object) => {
       let shape = this.options.shape
-      updateObjValue(shape, newShape)
+      merge(shape, newShape)
     },
     style: (newStyle) => {
       let style = this.options.style
-      updateObjValue(style, newStyle)
+      merge(style, newStyle)
     }
   }
   /**
