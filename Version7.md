@@ -1084,6 +1084,8 @@ class Painter {
 ```
 ### hide
 同上一个问题，在设置`ignored`后无法获取到相关元素，也就无从判断是否需要重绘。所以更改这一部分为`Stage.getAll`能获取到所有元素，而在`XElement.refresh`中如果其`ignored`为`true`，则什么也不做。调用`hide`时设置`dirty`。
+
+相应的，在事件检测阶段应该略过`ignored`为真的元素。
 ### Layer.dispose
 在绘制阶段即使当前层没有元素关联了，也无需调用`Layer.dispose`。
 
