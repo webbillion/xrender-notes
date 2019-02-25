@@ -1388,7 +1388,7 @@ interface LineOptions extends XElementOptions {
 }
 
 class Line extends XElement {
-  name ='circle'
+  name ='line'
   shape: LineShape = {
     x1: 0,
     y1: 0,
