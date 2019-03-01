@@ -1249,14 +1249,14 @@ export default function createDomHandler (dom: HTMLElement, stage: Stage) {
 ### 小小应用——悬浮指针
 现在考虑这样一个需求，要求鼠标在元素上时指针变为可点击形态，即`pointer`，参考`zrender`，我们将它设计为所有元素都默认如此，在`XElement.style`中添加`cursor`属性。很容易想到在每个元素创建时为其添加相关的事件处理。但同时也能想到的另一个模式就是冒泡，让总代理来处理这些重复触发多次的事。为此重写`XElement.dispatch`，并将`dispatch`加入继承的排除属性列表中。然后让`XRender`继承`Eventful`。可以发现这样的话鼠标不在元素上`xr`就无法获取到事件了，所幸修改起来并不难。
 ```typescript
-class XElement implements Transform, Eventful {
+class XElement implements Transform, Eventful<XrEventType, XrEvent> {
   // ...
-  dispatch(event: string, params: any): void {
+  dispatch(event: XrEventType, params?: XrEvent): void {
     Eventful.prototype.dispatch.call(this, event, params)
     if (this.parent && (this.parent.parent || this.parent._xr)) {
       this.parent.dispatch(event, params)
     } else {
-      this._xr && this._xr.dispatch(event, params)
+      this._xr.dispatch(event, params)
     }
   }
 }
@@ -1282,7 +1282,7 @@ function createDomHandler (dom: HTMLElement, stage: Stage) {
   })
 }
 // Xrender.ts
-class XRender {
+class XRender implements Eventful<XrEventType, XrEvent> {
   constructor (dom: string | HTMLElement, opt: XRenderOptions = {}) {
     extendsClass(this, Eventful)
     // ...
@@ -1292,8 +1292,8 @@ class XRender {
     const domHandler = this.domHandler = createDomHandler(this.painter.layerContainer, this.stage)
     let domEventHandlers = this.domHandler.domEventsHandlers
     for (let eventName in domEventHandlers) {
-      domHandler.on(eventName, e => {
-        this.dispatch(eventName, e)
+      domHandler.on(eventName as XrEventType, e => {
+        this.dispatch(eventName as XrEventType, e)
       })
     }
   }
@@ -1384,6 +1384,7 @@ class XElement {
 
 #### 变换顺序
 虽然看起来一切正常，但是如果调整元素的旋转角度，再进行拖曳的话，就会发现移动的轨迹很奇怪。这是因为之前是先旋转再平移的，因为拖曳的功能，我们需要调整变换的顺序，**先平移，再旋转**，要修改`XElment.setTransform`，`Group.resumeTransform`，`getTransformCord`，调整过程这里就不写了，相信大家可以很轻松地搞定。
+> 同样的，也可以不变换顺序，只需要对拖曳的向量做变换即可，此处就不用这种方式了。
 #### Group的拖曳
 另一个常见的需求是对一个组内所有元素进行拖曳。要做到这一点，首先要明确的是，一个`Group`是矩形的，并且它的形状和大小就是组内元素包围盒的并集——如果子元素相对定位元素不是自身，那么不计入。但是需要注意的是，计算组的包围盒时，子元素如果有`transform`，那么它的包围盒同样需要进行`transform`变换，最后才能获取到子元素准确的包围盒。
 > 对于旋转，不是元素本身旋转，包围盒就需要旋转，比如圆绕自身圆心旋转。但是如果考虑到这一点的话，事情会变得非常复杂，也很难去计算。因此这里就忽略这些差异性了（当然我不会说因为`zrender`没做所以我也不做）。

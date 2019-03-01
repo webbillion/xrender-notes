@@ -16,18 +16,24 @@
 
 创建`Eventful.ts`文件
 ```typescript
+type Handler<T> = (e?: T) => void
+
 // 不考虑`handler`不是函数的情况
-class Eventful {
+class Eventful<EventType = string, Params = any> {
   /**
    * 事件回调
    */
   _handlers: {
-    [prop: string]: Function[]
+    [prop: string]: Handler<Params>[]
   } = {}
   /**
    * 监听事件
    */
-  on (event: string, handler: Function) {
+  on (event: EventType, handler: Handler<Params>) {
+    // 绕过类型检查
+    if (typeof event !== 'string') {
+      return
+    }
     let handlers = this._handlers
     if (!handlers[event]) {
       handlers[event] = [handler]
@@ -37,11 +43,16 @@ class Eventful {
       }
       handlers[event].push(handler)
     }
+    
   }
   /**
    * 取消监听
    */
-  off (event?: string, handler?: Function) {
+  off (event?: EventType, handler?: Handler<Params>) {
+    // 绕过类型检查
+    if (typeof event !== 'string') {
+      return
+    }
     if (!event) {
       this._handlers = {}
       return
@@ -62,7 +73,11 @@ class Eventful {
   /**
    * 触发回调
    */
-  dispatch (event: string, params?: any) {
+  dispatch (event: EventType, params?: Params) {
+    // 绕过类型检查
+    if (typeof event !== 'string') {
+      return
+    }
     let handlers = this._handlers[event]
     if (!handlers) {
       return
@@ -133,13 +148,14 @@ export function extendsClass (context, Parents, args = []) {
   })
 }
 ```
-> 关于多继承，没有搜到太好的办法。使用类的话无法在构造函数中调用`Class.call()`这样的方法来实现`extendsCalss`的功能，所以自己随便写了一个。当然也许有更好的办法，欢迎提出。
+> 关于多继承，没有搜到太好的办法。使用类的话无法在构造函数中调用`Class.call()`这样的方法来实现`extendsCalss`的功能；如果采用混入继承则没有找到很好的类型推论的办法，所以自己随便写了一个。当然也许有更好的办法，欢迎提出。
 
 然后使用让`XElement`继承`Eventful`。
 ```typescript
 // 为了告诉编译器可以使用`Eventful`的属性
 class XElement implements EventFul {
   // ... 这里有一段编辑器自动添加的实现`Eventful`的代码，就不贴了
+  // 后期会添加事件类型和参数，也就不贴了
   constructor (opt: XElementOptions = {}) {
     extendsClass(this, Eventful)
     this.options = opt
@@ -179,7 +195,7 @@ import XElement from './xElements/XElement'
 /**
  * 定义事件的格式
  */
-interface XrEvent {
+export interface XrEvent {
   /**
    * 原始的事件信息
    */
@@ -199,14 +215,15 @@ interface XrEvent {
   /**
    * 事件类型
    */
-  type?: string
+  type?: XrEventType
 }
+export type XrEventType = 'click' | 'mousedown' | 'mouseup' | 'mousemove' | 'mouseleave' | 'mouseenter'
 /**
  * 鼠标事件名称
  * 目前也只考虑鼠标事件
  * 大部分事件不需要做特殊处理
  */
-const mouseEvents = [
+const mouseEvents: XrEventType[] = [
   'click',
   'mousedown',
   'mouseup',
@@ -233,7 +250,7 @@ const handlers = {
 /**
  * 将事件转换为内部的事件
  */
-function normalizeEvent (e: XrEvent,  type: string, xel: XElement) {
+function normalizeEvent (e: XrEvent,  type: XrEventType, xel: XElement) {
   e.target = xel
   e.type = type
 
@@ -253,7 +270,7 @@ function convertCoordinates (e: MouseEvent, dom: HTMLElement) {
 
   return xrEvent
 }
-export class DomHandler {
+export class DomHandler extends Eventful<XrEventType, XrEvent> {
   domEventsHandlers: {
     [prop: string]: Function
   } = {}
